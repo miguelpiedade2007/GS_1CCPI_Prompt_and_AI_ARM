@@ -1,0 +1,12 @@
+# Mission Control AI — Amazonia_Enviro_1
+# FIAP · Global Solution 2026.1
+# Instalar com: pip install -r requirements.txt
+
+# Core
+ollama==0.6.2
+python-dotenv==1.2.2
+
+# Interface CLI
+rich==15.0.0
+prompt-toolkit==3.0.52
+pyfiglet==1.0.4
