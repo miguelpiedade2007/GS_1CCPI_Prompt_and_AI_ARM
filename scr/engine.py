@@ -1,75 +1,120 @@
-"""
-FIAP - Ciência da Computação - Global Solution 2026.1
-Trilha 2: EnviroSat (Amazonia_Enviro_1)
-Script Principal de Orquestração da Missão
-"""
-
-
 import os
+import pyfiglet
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from ollama import Client
+from dotenv import load_dotenv
+
+# Importação dos módulos lógicos locais
 from telemetria import TelemetriaSatélite
 from alertas import AnalisadorAlertas
 
+# Carrega as variáveis de ambiente antes de qualquer inicialização
+load_dotenv()
+console = Console()
 
 
+class MissionControl:
+    def __init__(self):
+        # Configuração da lógica de hardware/alertas
+        self.satelite = TelemetriaSatélite()
+        self.analisador = AnalisadorAlertas()
 
-# Simulação de interface com a IA (Substitua pela chamada da API do Ollama/OpenAI depois)
-def chamar_aria_ai(system_prompt, contexto_missao):
-   """
-   Simula o processamento da IA ARIA.
-   Na versão final, aqui você usará client.chat.completions.create
-   """
-   return f"[RESPOSTA DA ARIA BASEADA NO PROMPT E NOS DADOS DA MISSÃO]\n{contexto_missao}"
+        # Lógica de autenticação validada no seu script de teste
+        self.api_key = os.getenv("OLLAMA_API_KEY")
+        self.client = Client(
+            host="https://ollama.com",
+            headers={
+                "Authorization": f"Bearer {self.api_key}"
+            }
+        )
+        self.model_name = "gpt-oss:120b"
+        self.prompt_path = os.path.join('docs', 'system_prompt.md')
 
+    def _carregar_system_prompt(self):
+        """Busca as diretrizes da ARIA no diretório docs."""
+        if os.path.exists(self.prompt_path):
+            with open(self.prompt_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        return "Você é a ARIA, inteligência artificial do satélite Amazonia_Enviro_1."
 
+    def consultar_aria(self, contexto):
+        """Envia os dados para o modelo 120b na nuvem."""
+        system_instructions = self._carregar_system_prompt()
 
+        # Chamada direta ao modelo conforme validado
+        response = self.client.chat(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": system_instructions},
+                {"role": "user", "content": contexto}
+            ],
+            options={"temperature": 0.3}
+        )
+        return response['message']['content'].strip()
 
-def executar_ciclo_missao(cenario="normal"):
-   print(f"\n--- INICIANDO MONITORAMENTO: CENÁRIO {cenario.upper()} ---")
+    def mostrar_tabela(self, pacote):
+        """Renderiza a telemetria usando a biblioteca Rich."""
+        table = Table(title="TELEMETRIA EM TEMPO REAL", title_style="bold cyan")
+        table.add_column("SENSOR", style="white")
+        table.add_column("VALOR", style="green")
 
+        for sensor, valor in pacote['telemetria'].items():
+            table.add_row(sensor.replace('_', ' ').upper(), str(valor))
 
-   # 1. Instanciar módulos
-   satelite = TelemetriaSatélite()
-   analisador = AnalisadorAlertas()
+        console.print(table)
 
+    def executar_ciclo(self, cenario="normal"):
+        """Executa o fluxo: Captura -> Análise -> IA."""
+        pacote = self.satelite.coletar(modo_cenario=cenario)
+        analise = self.analisador.avaliar(pacote)
 
-   # 2. Coletar dados brutos
-   pacote = satelite.coletar(modo_cenario=cenario)
-   print(f"[*] Telemetria recebida às {pacote['timestamp']}")
+        self.mostrar_tabela(pacote)
 
+        contexto_ia = (
+            f"Dados: {pacote['telemetria']}\n"
+            f"Alertas: {analise['alertas']}\n"
+            f"Risco: {analise['severidade']}"
+        )
 
-   # 3. Processamento de regras (Frente 4 - Julgamento Técnico)
-   resultado_analise = analisador.avaliar(pacote)
+        with console.status("[bold yellow]Processando via Ollama Cloud...", spinner="dots"):
+            diagnostico = self.consultar_aria(contexto_ia)
 
+            # Define cor do painel conforme severidade técnica
+            cor_borda = "red" if analise['severidade'] == "RED" else "green"
+            console.print(Panel(diagnostico, title="DIAGNÓSTICO ARIA", border_style=cor_borda))
 
-   # 4. Carregar o System Prompt (Frente 3 - Engenharia de Prompt)
-   try:
-       with open("docs/system_prompt.md", "r", encoding="utf-8") as f:
-           sys_prompt = f.read()
-   except FileNotFoundError:
-       sys_prompt = "Erro: Arquivo system_prompt.md não encontrado na pasta docs/."
+    def menu(self):
+        """Interface Principal (TUI)."""
+        # Limpa o console e exibe o banner do PyFiglet
+        os.system('cls' if os.name == 'nt' else 'clear')
+        banner = pyfiglet.figlet_format("MISSION CONTROL", font="slant")
+        console.print(f"[bold cyan]{banner}[/bold cyan]")
+        console.print("[dim]Sistema Amazonia_Enviro_1 v2.0 | Status: Online[/dim]\n")
 
+        while True:
+            try:
+                # Uso do input padrão para evitar erros de console screen buffer
+                console.print("\n(aria) > ", end="")
+                cmd = input().strip().lower()
 
-   # 5. Montar o contexto dinâmico para a IA
-   contexto_para_ai = f"""
-   DADOS DE TELEMETRIA ATUAIS: {pacote['telemetria']}
-   ALERTAS DETECTADOS: {resultado_analise['alertas']}
-   AÇÕES AUTOMÁTICAS: {resultado_analise['acoes_defensivas']}
-   SEVERIDADE DO SISTEMA: {resultado_analise['severidade']}
-   """
-
-
-   # 6. Chamar a IA
-   print("[*] Enviando dados para ARIA analisar impacto ambiental...")
-   diagnostico = chamar_aria_ai(sys_prompt, contexto_para_ai)
-
-
-   print("\n--- DIAGNÓSTICO FINAL DA MISSÃO ---")
-   print(diagnostico)
-
-
+                if cmd in ['sair', 'exit']:
+                    console.print("[bold yellow]Encerrando sistemas orbitais...[/bold yellow]")
+                    break
+                elif cmd == 'status':
+                    self.executar_ciclo("normal")
+                elif cmd == 'incendio':
+                    self.executar_ciclo("critico_incendio")
+                elif cmd == 'ajuda':
+                    console.print("[yellow]Comandos: status, incendio, sair[/yellow]")
+                else:
+                    console.print("[red]Comando inválido. Digite 'ajuda'.[/red]")
+            except KeyboardInterrupt:
+                break
 
 
 if __name__ == "__main__":
-   # Testando os três cenários exigidos no seu simulador
-   executar_ciclo_missao("normal")
-   executar_ciclo_missao("critico_incendio")
+    # Inicializa o controle de missão
+    app = MissionControl()
+    app.menu()
