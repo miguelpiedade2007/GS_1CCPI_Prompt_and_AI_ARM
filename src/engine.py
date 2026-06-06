@@ -7,9 +7,8 @@ from ollama import Client
 from dotenv import load_dotenv
 
 # Importação dos módulos lógicos locais
-from telemetria import TelemetriaSatélite
-from alertas import AnalisadorAlertas
-
+from src.telemetria import TelemetriaSatélite
+from src.alertas import AnalisadorAlertas
 # Carrega as variáveis de ambiente antes de qualquer inicialização
 load_dotenv()
 console = Console()
@@ -93,9 +92,12 @@ class MissionControl:
         console.print(f"[bold cyan]{banner}[/bold cyan]")
         console.print("[dim]Sistema Amazonia_Enviro_1 v2.0 | Status: Online[/dim]\n")
 
+        # A instrução de opções que você sugeriu inserida de forma elegante:
+        console.print(
+            "[yellow]Opções disponíveis:[/yellow] [green]status[/green] | [green]incendio[/green] | [green]sair[/green]")
+
         while True:
             try:
-                # Uso do input padrão para evitar erros de console screen buffer
                 console.print("\n(aria) > ", end="")
                 cmd = input().strip().lower()
 
@@ -107,7 +109,7 @@ class MissionControl:
                 elif cmd == 'incendio':
                     self.executar_ciclo("critico_incendio")
                 elif cmd == 'ajuda':
-                    console.print("[yellow]Comandos: status, incendio, sair[/yellow]")
+                    console.print("[yellow]Comandos aceitos: status, incendio, sair[/yellow]")
                 else:
                     console.print("[red]Comando inválido. Digite 'ajuda'.[/red]")
             except KeyboardInterrupt:
