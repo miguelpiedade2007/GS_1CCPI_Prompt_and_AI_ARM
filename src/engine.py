@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 # Importação dos módulos lógicos locais
 from src.telemetria import TelemetriaSatélite
 from src.alertas import AnalisadorAlertas
+
 # Carrega as variáveis de ambiente antes de qualquer inicialização
 load_dotenv()
 console = Console()
@@ -20,7 +21,7 @@ class MissionControl:
         self.satelite = TelemetriaSatélite()
         self.analisador = AnalisadorAlertas()
 
-        # Lógica de autenticação validada no seu script de teste
+        # Lógica de autenticação validada
         self.api_key = os.getenv("OLLAMA_API_KEY")
         self.client = Client(
             host="https://ollama.com",
@@ -29,7 +30,10 @@ class MissionControl:
             }
         )
         self.model_name = "gpt-oss:120b"
-        self.prompt_path = os.path.join('docs', 'system_prompt.md')
+        self.prompt_path = os.path.join('prompts', 'system_prompt.md')
+
+        # Variável de estado: guarda os alertas da última leitura para validação do mitigador
+        self.alertas_ativos = None
 
     def _carregar_system_prompt(self):
         """Busca as diretrizes da ARIA no diretório docs."""
@@ -42,7 +46,6 @@ class MissionControl:
         """Envia os dados para o modelo 120b na nuvem."""
         system_instructions = self._carregar_system_prompt()
 
-        # Chamada direta ao modelo conforme validado
         response = self.client.chat(
             model=self.model_name,
             messages=[
@@ -69,6 +72,13 @@ class MissionControl:
         pacote = self.satelite.coletar(modo_cenario=cenario)
         analise = self.analisador.avaliar(pacote)
 
+        # Controle de Estado: Atualiza a memória baseada na severidade atual
+        if analise['severidade'] == "RED" or analise['alertas']:
+            self.alertas_ativos = analise['alertas']
+        else:
+            # Limpa a memória se o sistema estiver operando normalmente
+            self.alertas_ativos = None
+
         self.mostrar_tabela(pacote)
 
         contexto_ia = (
@@ -84,17 +94,34 @@ class MissionControl:
             cor_borda = "red" if analise['severidade'] == "RED" else "green"
             console.print(Panel(diagnostico, title="DIAGNÓSTICO ARIA", border_style=cor_borda))
 
+    def executar_mitigacao(self):
+        """Funcionalidade 3: Gera plano de ação com base na memória de estado crítico."""
+        # Trava de Segurança: impede a execução se não houver alerta na memória
+        # A verificação (is None ou strings que indiquem vazio, dependendo do retorno do seu Analisador)
+        if not self.alertas_ativos or self.alertas_ativos == "Nenhum":
+            console.print(
+                "[yellow]Aviso: Operação abortada. Não há alertas críticos na memória do sistema. Execute 'status' ou 'incendio' para reavaliar a telemetria antes de solicitar mitigação.[/yellow]")
+            return
+
+        contexto_ia = (
+            f"Alertas ativos detectados na memória de hardware: {self.alertas_ativos}\n"
+            "Instrução: Com base nesses alertas críticos, gere um plano de mitigação emergencial. "
+            "Forneça os procedimentos sequenciais de baixo nível que o operador terrestre deve usar para conter as anomalias."
+        )
+
+        with console.status("[bold red]Compilando plano de mitigação de emergência via Ollama...", spinner="dots"):
+            plano = self.consultar_aria(contexto_ia)
+            console.print(Panel(plano, title="PLANO DE MITIGAÇÃO ARIA (AÇÃO REQUERIDA)", border_style="red"))
+
     def menu(self):
         """Interface Principal (TUI)."""
-        # Limpa o console e exibe o banner do PyFiglet
         os.system('cls' if os.name == 'nt' else 'clear')
         banner = pyfiglet.figlet_format("MISSION CONTROL", font="slant")
         console.print(f"[bold cyan]{banner}[/bold cyan]")
         console.print("[dim]Sistema Amazonia_Enviro_1 v2.0 | Status: Online[/dim]\n")
 
-        # A instrução de opções que você sugeriu inserida de forma elegante:
         console.print(
-            "[yellow]Opções disponíveis:[/yellow] [green]status[/green] | [green]incendio[/green] | [green]sair[/green]")
+            "[yellow]Opções disponíveis:[/yellow] [green]status[/green] | [green]incendio[/green] | [green]mitigar[/green] | [green]sair[/green]")
 
         while True:
             try:
@@ -108,8 +135,10 @@ class MissionControl:
                     self.executar_ciclo("normal")
                 elif cmd == 'incendio':
                     self.executar_ciclo("critico_incendio")
+                elif cmd == 'mitigar':
+                    self.executar_mitigacao()
                 elif cmd == 'ajuda':
-                    console.print("[yellow]Comandos aceitos: status, incendio, sair[/yellow]")
+                    console.print("[yellow]Comandos aceitos: status, incendio, mitigar, sair[/yellow]")
                 else:
                     console.print("[red]Comando inválido. Digite 'ajuda'.[/red]")
             except KeyboardInterrupt:
@@ -117,6 +146,5 @@ class MissionControl:
 
 
 if __name__ == "__main__":
-    # Inicializa o controle de missão
     app = MissionControl()
     app.menu()

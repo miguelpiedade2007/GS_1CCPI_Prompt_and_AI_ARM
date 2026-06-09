@@ -40,11 +40,6 @@ class TelemetriaSatélite:
             self.estado_atual["bateria_disponivel"] = round(random.uniform(25.0, 35.0), 2)
             self.estado_atual["buffer_imagens"] = round(random.uniform(70.0, 84.0), 2)
 
-        elif modo_cenario == "falha_downlink":
-            # Simula perda de comunicação com as estações terrestres do INPE (Buffer enchendo)
-            self.estado_atual["buffer_imagens"] = round(random.uniform(86.0, 98.0), 2)
-            self.estado_atual["bateria_disponivel"] = round(random.uniform(15.0, 19.9), 2)  # Bateria cai junto
-            self.estado_atual["erro_geolocalizacao"] = round(random.uniform(51.0, 65.0), 1)
 
         # Garante limites físicos dos sensores matematicamente
         self.estado_atual["bateria_disponivel"] = max(0.0, min(100.0, self.estado_atual["bateria_disponivel"]))

@@ -117,7 +117,7 @@ python main.py
 
 ## 🧠 System Prompt
 
-O system prompt completo da ARIA está em [`docs/system_prompt.md`](docs/system_prompt.md).
+O system prompt completo da ARIA está em [`prompts/system_prompt.md`](prompts/system_prompt.md).
 
 A ARIA foi instruída a sempre seguir o formato:
 
@@ -166,8 +166,8 @@ Dado-como-serviço (DaaS): o sistema orbital gera imagens e alertas que são dis
 
 ## 📸 Demonstração
 
-![Status normal da missão](assets/screenshot_normal.png)
-![Alerta crítico com análise da ARIA](assets/screenshot_alerta.png)
+![Status normal da missão](assets/Aria_Status_normal.png)
+![Alerta crítico com análise da ARIA](Aria_Status_critico.png)
 
 ---
 
@@ -182,7 +182,7 @@ Dado-como-serviço (DaaS): o sistema orbital gera imagens e alertas que são dis
 
 ## 🎥 Vídeo de demonstração
 
-🔗 [Assistir demonstração no YouTube](https://www.youtube.com/watch?v=SEU_ID_AQUI)
+🔗 [Assistir demonstração no YouTube](https://youtu.be/uiUWDdWqJJw)
 
 > Configurado como "Não listado" no YouTube.
 
